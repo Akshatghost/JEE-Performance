@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% block content %}
+<div class="top"><div class="title"><h1>JEE Performance</h1><div class="muted">Decision dashboard · <span id="today"></span></div></div><div><button class="secondary" onclick="seedDemo()">Load demo data</button></div></div>
+<div id="kpis" class="grid kpis"></div>
+<div class="grid two section"><div class="card chart"><div class="muted">SCORE PROGRESSION</div><canvas id="scoreChart"></canvas></div><div class="card"><div class="muted">PERFORMANCE DIAGNOSIS</div><div id="diagnosis" style="margin-top:12px"></div></div></div>
+<div class="grid three section"><div class="card"><div class="muted">SUBJECT PERFORMANCE</div><div id="subjects"></div></div><div class="card"><div class="muted">WEAK CHAPTERS</div><div id="weak"></div></div><div class="card"><div class="muted">REVISION QUEUE</div><div id="revision"></div></div></div>
+<div class="grid two section"><div class="card"><div class="muted">ALL-TIME RECORDS</div><div id="records"></div></div><div class="card"><div class="muted">SO WHAT?</div><div id="soWhat" style="margin-top:12px"></div></div></div>
+{% endblock %}{% block scripts %}<script>
+const f=v=>Number(v||0).toFixed(1).replace('.0','');
+async function load(){const d=await api('/api/dashboard');document.getElementById('today').textContent=new Date().toLocaleDateString('en-IN',{dateStyle:'medium'});
+const k=[['Latest score',`${f(d.kpis.latest_score)} / 300`],['Best score',`${f(d.kpis.best_score)} / 300`],['Average',f(d.kpis.avg_score)],['Accuracy',f(d.kpis.accuracy)+'%'],['DPPs',d.kpis.dpps],['Questions',d.kpis.questions],['Correct',d.kpis.correct],['Tests',d.kpis.tests],['Chapters done',d.kpis.chapters_done],['Active streak',d.kpis.streak+'d']];
+document.getElementById('kpis').innerHTML=k.map(x=>`<div class="card kpi"><div class="label">${x[0]}</div><div class="value">${x[1]}</div></div>`).join('');
+document.getElementById('diagnosis').innerHTML=d.diagnosis.map(x=>`<div class="insight ${x.severity}"><b>${x.title}</b><div class="muted" style="margin-top:5px">${x.text}</div></div>`).join('');
+document.getElementById('subjects').innerHTML=Object.entries(d.subjects).map(([s,x])=>`<div style="padding:12px 0;border-bottom:1px solid var(--line)"><b>${s}</b><div class="muted">Avg marks ${f(x.avg)} · Accuracy ${f(x.accuracy)}%</div></div>`).join('');
+document.getElementById('weak').innerHTML=d.weak.length?d.weak.map(x=>`<div style="padding:10px 0;border-bottom:1px solid var(--line)"><b>${x.name}</b><div class="muted">${x.subject} · ${f(x.accuracy)}% accuracy · confidence ${x.confidence}/5</div></div>`).join(''):'<div class="empty">No chapter data yet.</div>';
+document.getElementById('revision').innerHTML=d.revision.sort((a,b)=>b.days-a.days).slice(0,5).map(x=>`<div style="padding:10px 0;border-bottom:1px solid var(--line)"><b>${x.chapter}</b><div class="muted">${x.days===999?'Never revised':x.days+' days ago'} · ${f(x.accuracy)}% accuracy</div></div>`).join('')||'<div class="empty">Nothing due.</div>';
+document.getElementById('records').innerHTML=Object.entries(d.records).map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)"><span>${k}</span><b>${f(v)}</b></div>`).join('');
+let advice=d.diagnosis[0];document.getElementById('soWhat').innerHTML=`<div class="insight ${advice.severity}"><b>${advice.title}</b><p class="muted">${advice.text}</p></div>`;
+new Chart(document.getElementById('scoreChart'),{type:'line',data:{labels:d.tests.map(x=>x.date),datasets:[{label:'Score',data:d.tests.map(x=>x.marks),tension:.25},{label:'5-test average',data:d.tests.map((_,i)=>{let a=d.tests.slice(Math.max(0,i-4),i+1).map(x=>x.marks);return a.reduce((p,c)=>p+c,0)/a.length}),tension:.25}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8e98a5'}}},scales:{x:{ticks:{color:'#8e98a5'}},y:{ticks:{color:'#8e98a5'}}}}});
+} load();
+async function seedDemo(){await api('/api/demo','POST');load();}
+</script>{% endblock %}

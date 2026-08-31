@@ -1,0 +1,3 @@
+{% extends "base.html" %}{% block content %}<div class="top"><div class="title"><h1>Activity Calendar</h1><div class="muted">Tests, DPPs and revision activity.</div></div></div><div class="card"><div id="calendar" class="grid three"></div></div>{% endblock %}{% block scripts %}<script>
+async function load(){let d=await api('/api/dashboard');let map={};d.tests.forEach(x=>map[x.date]=(map[x.date]||0)+1);let today=new Date();let out='';for(let i=41;i>=0;i--){let x=new Date(today);x.setDate(today.getDate()-i);let k=x.toISOString().slice(0,10),n=map[k]||0;out+=`<div class="card" style="min-height:75px"><b>${k}</b><div class="muted">${n?'Test activity':'No test'}</div></div>`}calendar.innerHTML=out}load();
+</script>{% endblock %}
